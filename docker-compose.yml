@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: fichadas-db
+    environment:
+      - POSTGRES_DB=fichadas_db
+      - POSTGRES_USER=fichadas_user
+      - POSTGRES_PASSWORD=fichadas_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fichadas_user -d fichadas_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend FastAPI
+  backend:
+    build: ./backend
+    container_name: fichadas-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/fichadas:/data/fichadas
+      - ./data/backup:/data/backup
+    environment:
+      - DATABASE_URL=postgresql://fichadas_user:fichadas_pass@db:5432/fichadas_db
+      - DEBUG=true
+      - CARPETA_SALIDA=/data/fichadas
+      - CARPETA_BACKUP=/data/backup
+      - FRECUENCIA_MINUTOS=5
+      - INICIO_AUTOMATICO=true
+      - MAX_REINTENTOS=3
+      - NOTIFICATION_TYPE=none
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Angular (desarrollo)
+  frontend-dev:
+    image: node:18-alpine
+    container_name: fichadas-frontend-dev
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "4200:4200"
+    command: >
+      sh -c "if [ ! -d node_modules ]; then npm install; fi && ng serve --host 0.0.0.0 --port 4200"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    profiles:
+      - dev
+
+  # Frontend Angular (producción)
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fichadas-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - prod
+
+  # Redis (opcional para Celery)
+  redis:
+    image: redis:7-alpine
+    container_name: fichadas-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    profiles:
+      - redis
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: fichadas-network
