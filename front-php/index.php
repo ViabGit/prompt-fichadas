@@ -320,9 +320,9 @@
         }
 
     async function cargarDispositivos() {
-            try {
-        // Ruta correcta según backend: /api/dispositivos
-        const response = await fetch(`${API_BASE}/dispositivos`);
+        try {
+            // Ruta correcta según backend: /api/dispositivos
+            const response = await fetch(`${API_BASE}/dispositivos`);
                 if (!response.ok) throw new Error('Error al cargar dispositivos');
                 
                 const dispositivos = await response.json();
@@ -350,12 +350,12 @@
                     </div>
                 `).join('');
                 
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('deviceList').innerHTML = 
-                    '<div class="error-message">Error al cargar dispositivos</div>';
-            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('deviceList').innerHTML =
+                '<div class="error-message">Error al cargar dispositivos</div>';
         }
+    }
 
         async function procesarFichadas() {
             if (!confirm('¿Desea procesar las fichadas de todos los dispositivos?')) return;
