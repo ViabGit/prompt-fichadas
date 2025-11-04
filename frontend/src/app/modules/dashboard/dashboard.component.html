@@ -1,0 +1,121 @@
+<div class="dashboard-container">
+  <h1>Dashboard - Sistema de Fichadas ZKTeco</h1>
+
+  <!-- Tarjetas de estadísticas -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-header>
+        <mat-icon color="primary">devices</mat-icon>
+        <mat-card-title>Total Dispositivos</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value">{{ totalDispositivos }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-header>
+        <mat-icon color="primary">check_circle</mat-icon>
+        <mat-card-title>Online</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value success">{{ dispositivosOnline }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-header>
+        <mat-icon color="warn">error</mat-icon>
+        <mat-card-title>Offline</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value error">{{ dispositivosOffline }}</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-header>
+        <mat-icon color="accent">today</mat-icon>
+        <mat-card-title>Fichadas Hoy</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value">{{ fichadasHoy }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Tabla de dispositivos -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Estado de Dispositivos</mat-card-title>
+      <button mat-raised-button color="primary" (click)="cargarDatos()">
+        <mat-icon>refresh</mat-icon>
+        Actualizar
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner></mat-spinner>
+      </div>
+
+      <div *ngIf="error" class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p>{{ error }}</p>
+        <button mat-button (click)="cargarDatos()">Reintentar</button>
+      </div>
+
+      <table mat-table [dataSource]="dispositivos" class="dispositivos-table" *ngIf="!loading && !error">
+        <!-- Columna Nombre -->
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let dispositivo">{{ dispositivo.nombre }}</td>
+        </ng-container>
+
+        <!-- Columna IP -->
+        <ng-container matColumnDef="ip">
+          <th mat-header-cell *matHeaderCellDef>IP:Puerto</th>
+          <td mat-cell *matCellDef="let dispositivo">{{ dispositivo.ip }}:{{ dispositivo.puerto }}</td>
+        </ng-container>
+
+        <!-- Columna Estado -->
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let dispositivo">
+            <mat-chip [color]="getEstadoChipColor(dispositivo.estado_conexion)" selected>
+              {{ dispositivo.estado_conexion || 'desconocido' }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <!-- Columna Última Consulta -->
+        <ng-container matColumnDef="ultima_consulta">
+          <th mat-header-cell *matHeaderCellDef>Última Consulta</th>
+          <td mat-cell *matCellDef="let dispositivo">{{ formatFecha(dispositivo.fecha_ultima_consulta) }}</td>
+        </ng-container>
+
+        <!-- Columna Acciones -->
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let dispositivo">
+            <button mat-icon-button color="primary" (click)="testConexion(dispositivo.id)" matTooltip="Probar conexión">
+              <mat-icon>wifi</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" (click)="descargarFichadas(dispositivo.id)" matTooltip="Descargar fichadas">
+              <mat-icon>download</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <div *ngIf="!loading && !error && dispositivos.length === 0" class="empty-state">
+        <mat-icon>inbox</mat-icon>
+        <p>No hay dispositivos configurados</p>
+        <button mat-raised-button color="primary" routerLink="/dispositivos">Agregar Dispositivo</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

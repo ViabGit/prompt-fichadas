@@ -1,0 +1,90 @@
+<h2 mat-dialog-title>
+  <mat-icon>{{ isEditMode ? 'edit' : 'add' }}</mat-icon>
+  {{ isEditMode ? 'Editar' : 'Agregar' }} Dispositivo
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="dispositivoForm" class="dispositivo-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre del Dispositivo</mat-label>
+      <input matInput formControlName="nombre" placeholder="Ej: Reloj Planta 1">
+      <mat-icon matPrefix>label</mat-icon>
+      <mat-error *ngIf="dispositivoForm.get('nombre')?.invalid">
+        {{ getErrorMessage('nombre') }}
+      </mat-error>
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Dirección IP</mat-label>
+        <input matInput formControlName="ip" placeholder="192.168.1.100">
+        <mat-icon matPrefix>network_check</mat-icon>
+        <mat-error *ngIf="dispositivoForm.get('ip')?.invalid">
+          {{ getErrorMessage('ip') }}
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Puerto</mat-label>
+        <input matInput type="number" formControlName="puerto">
+        <mat-icon matPrefix>settings_ethernet</mat-icon>
+        <mat-error *ngIf="dispositivoForm.get('puerto')?.invalid">
+          {{ getErrorMessage('puerto') }}
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Número de Dispositivo</mat-label>
+      <input matInput formControlName="numero_dispositivo" placeholder="Ej: 33">
+      <mat-icon matPrefix>tag</mat-icon>
+      <mat-hint>Número único que identifica el dispositivo en las fichadas</mat-hint>
+      <mat-error *ngIf="dispositivoForm.get('numero_dispositivo')?.invalid">
+        {{ getErrorMessage('numero_dispositivo') }}
+      </mat-error>
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Modelo</mat-label>
+        <mat-select formControlName="modelo">
+          <mat-option value="SF300">SF300</mat-option>
+          <mat-option value="SF400">SF400</mat-option>
+          <mat-option value="iClock">iClock</mat-option>
+          <mat-option value="K40">K40</mat-option>
+          <mat-option value="Otro">Otro</mat-option>
+        </mat-select>
+        <mat-icon matPrefix>devices_other</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Marca</mat-label>
+        <mat-select formControlName="marca">
+          <mat-option value="ZK">ZKTeco</mat-option>
+          <mat-option value="ZKSoftware">ZKSoftware</mat-option>
+          <mat-option value="Otro">Otro</mat-option>
+        </mat-select>
+        <mat-icon matPrefix>business</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div class="toggle-field">
+      <mat-slide-toggle formControlName="activo">
+        Dispositivo Activo
+      </mat-slide-toggle>
+      <span class="toggle-hint">
+        Solo los dispositivos activos serán consultados automáticamente
+      </span>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()" [disabled]="loading">
+    Cancelar
+  </button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="loading || dispositivoForm.invalid">
+    <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+    <span *ngIf="!loading">{{ isEditMode ? 'Actualizar' : 'Crear' }}</span>
+  </button>
+</mat-dialog-actions>

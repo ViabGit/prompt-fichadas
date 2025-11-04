@@ -1,0 +1,177 @@
+<div class="configuracion-container">
+  <h1>
+    <mat-icon>settings</mat-icon>
+    Configuración del Sistema
+  </h1>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <form [formGroup]="configuracionForm" *ngIf="!loading">
+    <mat-tab-group>
+      <!-- Tab General -->
+      <mat-tab label="General">
+        <mat-card>
+          <mat-card-content>
+            <div class="form-section">
+              <h3>Configuración de Recolección</h3>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Carpeta de Salida</mat-label>
+                <input matInput formControlName="carpeta_salida">
+                <mat-icon matPrefix>folder</mat-icon>
+                <mat-hint>Carpeta donde se guardarán los archivos de fichadas</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Carpeta de Backup</mat-label>
+                <input matInput formControlName="carpeta_backup">
+                <mat-icon matPrefix>backup</mat-icon>
+                <mat-hint>Carpeta para almacenar backups</mat-hint>
+              </mat-form-field>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Frecuencia (minutos)</mat-label>
+                  <input matInput type="number" formControlName="frecuencia_minutos">
+                  <mat-icon matPrefix>schedule</mat-icon>
+                  <mat-hint>Cada cuántos minutos se ejecuta la recolección</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Máximo Reintentos</mat-label>
+                  <input matInput type="number" formControlName="max_reintentos">
+                  <mat-icon matPrefix>replay</mat-icon>
+                  <mat-hint>Reintentos antes de marcar como error</mat-hint>
+                </mat-form-field>
+              </div>
+
+              <div class="toggle-field">
+                <mat-slide-toggle formControlName="inicio_automatico">
+                  Inicio Automático
+                </mat-slide-toggle>
+                <span class="toggle-hint">
+                  Iniciar recolección automáticamente al arrancar el sistema
+                </span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Tab Notificaciones -->
+      <mat-tab label="Notificaciones">
+        <mat-card>
+          <mat-card-content>
+            <div class="form-section">
+              <h3>Configuración de Notificaciones</h3>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de Notificación</mat-label>
+                <mat-select formControlName="tipo_notificacion">
+                  <mat-option value="ninguno">Ninguno</mat-option>
+                  <mat-option value="smtp">SMTP (Email)</mat-option>
+                  <mat-option value="sendgrid">SendGrid</mat-option>
+                </mat-select>
+                <mat-icon matPrefix>notifications</mat-icon>
+              </mat-form-field>
+
+              <mat-divider></mat-divider>
+
+              <!-- SMTP Configuration -->
+              <div class="subsection" *ngIf="configuracionForm.get('tipo_notificacion')?.value === 'smtp'">
+                <h4>Configuración SMTP</h4>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Servidor SMTP</mat-label>
+                    <input matInput formControlName="smtp_servidor" placeholder="smtp.gmail.com">
+                    <mat-icon matPrefix>dns</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Puerto</mat-label>
+                    <input matInput type="number" formControlName="smtp_puerto">
+                    <mat-icon matPrefix>settings_ethernet</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Usuario SMTP</mat-label>
+                  <input matInput formControlName="smtp_usuario">
+                  <mat-icon matPrefix>person</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Contraseña SMTP</mat-label>
+                  <input matInput type="password" formControlName="smtp_password">
+                  <mat-icon matPrefix>lock</mat-icon>
+                  <mat-hint>Dejar vacío para mantener la actual</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Email Remitente</mat-label>
+                  <input matInput type="email" formControlName="smtp_desde">
+                  <mat-icon matPrefix>email</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Emails Destinatarios</mat-label>
+                  <input matInput formControlName="smtp_para" placeholder="email1@example.com, email2@example.com">
+                  <mat-icon matPrefix>people</mat-icon>
+                  <mat-hint>Separar múltiples emails con comas</mat-hint>
+                </mat-form-field>
+
+                <div class="toggle-field">
+                  <mat-slide-toggle formControlName="smtp_usar_tls">
+                    Usar TLS/SSL
+                  </mat-slide-toggle>
+                </div>
+              </div>
+
+              <!-- SendGrid Configuration -->
+              <div class="subsection" *ngIf="configuracionForm.get('tipo_notificacion')?.value === 'sendgrid'">
+                <h4>Configuración SendGrid</h4>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>API Key de SendGrid</mat-label>
+                  <input matInput type="password" formControlName="sendgrid_api_key">
+                  <mat-icon matPrefix>vpn_key</mat-icon>
+                  <mat-hint>Dejar vacío para mantener la actual</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Email Remitente</mat-label>
+                  <input matInput type="email" formControlName="sendgrid_desde">
+                  <mat-icon matPrefix>email</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Emails Destinatarios</mat-label>
+                  <input matInput formControlName="sendgrid_para" placeholder="email1@example.com, email2@example.com">
+                  <mat-icon matPrefix>people</mat-icon>
+                  <mat-hint>Separar múltiples emails con comas</mat-hint>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-tab>
+    </mat-tab-group>
+
+    <!-- Botones de acción -->
+    <div class="actions">
+      <button mat-button (click)="restaurarDefecto()" [disabled]="saving">
+        <mat-icon>restore</mat-icon>
+        Restaurar Defecto
+      </button>
+      <div class="spacer"></div>
+      <button mat-raised-button color="primary" (click)="guardar()" [disabled]="saving || configuracionForm.invalid">
+        <mat-spinner *ngIf="saving" diameter="20"></mat-spinner>
+        <mat-icon *ngIf="!saving">save</mat-icon>
+        {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+      </button>
+    </div>
+  </form>
+</div>
