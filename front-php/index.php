@@ -304,12 +304,14 @@
                 
                 const data = await response.json();
                 
-                document.getElementById('dispositivosActivos').textContent = data.dispositivos_activos || 0;
-                document.getElementById('totalRegistros').textContent = data.total_registros || 0;
-                document.getElementById('registrosHoy').textContent = data.registros_hoy || 0;
+                // Mapear campos reales del backend
+                document.getElementById('dispositivosActivos').textContent = data.total_dispositivos ?? 0;
+                document.getElementById('totalRegistros').textContent = data.fichadas_hoy ?? 0;
+                // Usamos errores_ultimas_24h como "Registros Hoy" si no hay otro campo más apropiado
+                document.getElementById('registrosHoy').textContent = data.fichadas_hoy ?? 0;
                 
-                const ultimoProceso = data.ultimo_procesamiento ? 
-                    new Date(data.ultimo_procesamiento).toLocaleTimeString('es-ES') : 
+                const ultimoProceso = data.ultima_actualizacion ? 
+                    new Date(data.ultima_actualizacion).toLocaleTimeString('es-ES') : 
                     'Nunca';
                 document.getElementById('ultimoProceso').textContent = ultimoProceso;
                 
