@@ -76,6 +76,20 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    profiles:
+      - angular
+
+  # Frontend PHP con Apache
+  frontend-php:
+    build: ./front-php
+    container_name: fichadas-frontend-php
+    ports:
+      - "4300:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    environment:
+      - API_URL=http://backend:8000
 
   # Redis (opcional para Celery)
   redis:
