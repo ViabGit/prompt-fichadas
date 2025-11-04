@@ -257,9 +257,9 @@
         <div class="section">
             <h2>⚙️ Acciones Rápidas</h2>
             <div class="actions">
-                <button class="btn" onclick="procesarFichadas()">▶️ Procesar Fichadas</button>
-                <button class="btn" onclick="iniciarScheduler()">⏰ Iniciar Scheduler</button>
-                <button class="btn" onclick="detenerScheduler()">⏸️ Detener Scheduler</button>
+                <button class="btn" onclick="procesarFichadas(event)" title="(Temporal) Acción no disponible">▶️ Procesar Fichadas</button>
+                <button class="btn" onclick="iniciarScheduler(event)">⏰ Iniciar Scheduler</button>
+                <button class="btn" onclick="detenerScheduler(event)">⏸️ Detener Scheduler</button>
                 <button class="btn" onclick="cargarDatos()">🔄 Actualizar</button>
             </div>
         </div>
@@ -357,62 +357,33 @@
         }
     }
 
-        async function procesarFichadas() {
-            if (!confirm('¿Desea procesar las fichadas de todos los dispositivos?')) return;
-            
-            try {
-                const btn = event.target;
-                btn.disabled = true;
-                btn.textContent = '⏳ Procesando...';
-                
-                const response = await fetch(`${API_BASE}/monitoreo/procesar`, {
-                    method: 'POST'
-                });
-                
-                if (!response.ok) throw new Error('Error al procesar fichadas');
-                
-                const result = await response.json();
-                alert(`Procesamiento exitoso:\n${result.mensaje || 'Completado'}`);
-                await cargarDatos();
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al procesar fichadas: ' + error.message);
-            } finally {
-                const btn = event.target;
-                btn.disabled = false;
-                btn.textContent = '▶️ Procesar Fichadas';
-            }
+        async function procesarFichadas(e) {
+            // No existe endpoint /api/monitoreo/procesar en backend actual.
+            // Se deja botón como placeholder.
+            e.preventDefault();
+            alert('Acción no disponible: el endpoint de procesamiento masivo no está implementado.');
         }
 
-        async function iniciarScheduler() {
+        async function iniciarScheduler(e) {
+            e.preventDefault();
             try {
-                const response = await fetch(`${API_BASE}/configuracion/scheduler/iniciar`, {
-                    method: 'POST'
-                });
-                
+                const response = await fetch(`${API_BASE}/configuracion/scheduler/start`, { method: 'POST' });
                 if (!response.ok) throw new Error('Error al iniciar scheduler');
-                
                 const result = await response.json();
-                alert(result.mensaje || 'Scheduler iniciado');
-                
+                alert(result.message || result.mensaje || 'Scheduler iniciado');
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al iniciar scheduler: ' + error.message);
             }
         }
 
-        async function detenerScheduler() {
+        async function detenerScheduler(e) {
+            e.preventDefault();
             try {
-                const response = await fetch(`${API_BASE}/configuracion/scheduler/detener`, {
-                    method: 'POST'
-                });
-                
+                const response = await fetch(`${API_BASE}/configuracion/scheduler/stop`, { method: 'POST' });
                 if (!response.ok) throw new Error('Error al detener scheduler');
-                
                 const result = await response.json();
-                alert(result.mensaje || 'Scheduler detenido');
-                
+                alert(result.message || result.mensaje || 'Scheduler detenido');
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al detener scheduler: ' + error.message);
