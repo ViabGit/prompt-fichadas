@@ -19,6 +19,7 @@ recolector_service = RecolectorService()
 
 
 @router.get("/", response_model=List[DispositivoResponse])
+@router.get("", response_model=List[DispositivoResponse])
 async def listar_dispositivos(db: Session = Depends(get_db)):
     """Obtener todos los dispositivos"""
     dispositivos = db.query(Dispositivo).all()
@@ -35,6 +36,7 @@ async def obtener_dispositivo(dispositivo_id: str, db: Session = Depends(get_db)
 
 
 @router.post("/", response_model=DispositivoResponse)
+@router.post("", response_model=DispositivoResponse)
 async def crear_dispositivo(dispositivo: DispositivoCreate, db: Session = Depends(get_db)):
     """Crear nuevo dispositivo"""
     # Verificar que no exista otro con la misma ID

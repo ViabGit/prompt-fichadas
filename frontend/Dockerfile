@@ -1,19 +1,22 @@
-# Dockerfile para producción
+# Dockerfile simplificado para producción
 FROM node:18-alpine as build
 
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
-COPY package*.json ./
+# Instalar Angular CLI globalmente
+RUN npm install -g @angular/cli@17
+
+# Copiar package.json
+COPY package.json ./
 
 # Instalar dependencias
-RUN npm ci --only=production
+RUN npm install
 
 # Copiar código fuente
 COPY . .
 
 # Build de producción
-RUN npm run build:prod
+RUN ng build --configuration production
 
 # Usar nginx para servir
 FROM nginx:alpine

@@ -56,7 +56,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None
+    redoc_url="/redoc" if settings.debug else None,
+    redirect_slashes=False  # Evitar redirecciones automáticas de trailing slash
 )
 
 # Configurar CORS
@@ -103,11 +104,12 @@ async def health_check():
     """Health check para Docker y monitoring"""
     from .services.scheduler import get_scheduler_status
     from .database import SessionLocal
+    from sqlalchemy import text
     
     try:
         # Test database
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         db_status = "healthy"
     except Exception as e:

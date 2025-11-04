@@ -1,4 +1,4 @@
-from pyzk import ZK
+from pyzk2 import ZK
 from datetime import datetime, timedelta
 import os
 import shutil
@@ -197,10 +197,27 @@ class RecolectorService:
         if not ultima_fecha:
             return fichadas
         
-        fichadas_nuevas = [
-            f for f in fichadas 
-            if f.timestamp > ultima_fecha
-        ]
+        # Usar zona horaria de Buenos Aires
+        import pytz
+        buenos_aires_tz = pytz.timezone('America/Argentina/Buenos_Aires')
+        
+        # Asegurar que ultima_fecha tenga timezone
+        if ultima_fecha.tzinfo is None:
+            ultima_fecha = buenos_aires_tz.localize(ultima_fecha)
+        else:
+            ultima_fecha = ultima_fecha.astimezone(buenos_aires_tz)
+        
+        fichadas_nuevas = []
+        for f in fichadas:
+            # Asegurar que el timestamp de la fichada tenga timezone
+            timestamp = f.timestamp
+            if timestamp.tzinfo is None:
+                timestamp = buenos_aires_tz.localize(timestamp)
+            else:
+                timestamp = timestamp.astimezone(buenos_aires_tz)
+            
+            if timestamp > ultima_fecha:
+                fichadas_nuevas.append(f)
         
         logger.info(f"Filtradas {len(fichadas_nuevas)} fichadas posteriores a {ultima_fecha}")
         return fichadas_nuevas

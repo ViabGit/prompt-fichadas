@@ -2,7 +2,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
-from ..models.dispositivo import Dispositivo, ConfiguracionGlobal
+from ..models.dispositivo import Dispositivo, ConfiguracionGlobal, LogSistema
 from .recolector import RecolectorService
 from .notificacion import NotificacionService
 import logging
@@ -59,6 +59,20 @@ class SchedulerService:
         self.stop()
         self.start()
     
+    def _guardar_log(self, db: Session, nivel: str, mensaje: str):
+        """Guarda un log en la base de datos"""
+        try:
+            log_entry = LogSistema(
+                nivel=nivel,
+                mensaje=mensaje,
+                componente="scheduler"
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception as e:
+            logger.error(f"Error guardando log en BD: {str(e)}")
+            db.rollback()
+    
     async def ejecutar_recoleccion(self):
         """Ejecuta la recolección para todos los dispositivos activos"""
         start_time = datetime.now()
@@ -66,6 +80,9 @@ class SchedulerService:
         
         db = SessionLocal()
         try:
+            # Guardar inicio en BD
+            self._guardar_log(db, "INFO", "Iniciando recolección automática de fichadas")
+            
             # Obtener dispositivos activos
             dispositivos = db.query(Dispositivo).filter(Dispositivo.activo == True).all()
             
@@ -73,14 +90,16 @@ class SchedulerService:
                 logger.info("No hay dispositivos activos para procesar")
                 return
             
-            # Procesar cada dispositivo
+            # Procesar cada dispositivo secuencialmente
             dispositivos_exitosos = 0
             dispositivos_error = 0
             total_fichadas = 0
             
-            for dispositivo in dispositivos:
+            logger.info(f"Iniciando procesamiento de {len(dispositivos)} dispositivos...")
+            
+            for idx, dispositivo in enumerate(dispositivos, 1):
                 try:
-                    logger.info(f"Procesando dispositivo: {dispositivo.nombre}")
+                    logger.info(f"[{idx}/{len(dispositivos)}] Procesando: {dispositivo.nombre} ({dispositivo.ip})")
                     
                     resultado = self.recolector.procesar_dispositivo_completo(
                         dispositivo, db, forzar_descarga=False
@@ -89,18 +108,25 @@ class SchedulerService:
                     if resultado.success:
                         dispositivos_exitosos += 1
                         total_fichadas += resultado.fichadas_descargadas
-                        logger.info(f"✓ {dispositivo.nombre}: {resultado.fichadas_descargadas} fichadas")
+                        if resultado.fichadas_descargadas > 0:
+                            logger.info(f"✓ [{idx}/{len(dispositivos)}] {dispositivo.nombre}: {resultado.fichadas_descargadas} fichadas descargadas")
+                        else:
+                            logger.info(f"✓ [{idx}/{len(dispositivos)}] {dispositivo.nombre}: Sin fichadas nuevas")
                     else:
                         dispositivos_error += 1
-                        logger.warning(f"✗ {dispositivo.nombre}: {resultado.mensaje}")
+                        logger.warning(f"✗ [{idx}/{len(dispositivos)}] {dispositivo.nombre}: {resultado.mensaje}")
                         
                         # Verificar si necesita enviar alerta
                         if dispositivo.intentos_fallidos >= 3:
                             await self.enviar_alerta_dispositivo(dispositivo)
                     
+                    # Pequeño delay entre dispositivos para no saturar
+                    if idx < len(dispositivos):
+                        await asyncio.sleep(2)
+                    
                 except Exception as e:
                     dispositivos_error += 1
-                    logger.error(f"Error procesando {dispositivo.nombre}: {str(e)}")
+                    logger.error(f"✗ [{idx}/{len(dispositivos)}] Error procesando {dispositivo.nombre}: {str(e)}")
             
             # Log resumen
             duration = (datetime.now() - start_time).total_seconds()
@@ -111,12 +137,18 @@ class SchedulerService:
             
             logger.info(resumen)
             
+            # Guardar resumen en BD
+            nivel_log = "WARNING" if dispositivos_error > dispositivos_exitosos else "INFO"
+            self._guardar_log(db, nivel_log, resumen)
+            
             # Enviar resumen diario si corresponde
             if start_time.hour == 18 and start_time.minute < 10:  # Resumen a las 6 PM
                 await self.enviar_resumen_diario(dispositivos_exitosos, dispositivos_error, total_fichadas)
                 
         except Exception as e:
-            logger.error(f"Error en recolección automática: {str(e)}")
+            error_msg = f"Error en recolección automática: {str(e)}"
+            logger.error(error_msg)
+            self._guardar_log(db, "ERROR", error_msg)
         finally:
             db.close()
     

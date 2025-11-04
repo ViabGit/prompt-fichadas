@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from typing import List
+from typing import List, Dict
 from datetime import datetime, timedelta
 from ..database import get_db
 from ..models.dispositivo import Dispositivo, LogSistema
@@ -9,9 +9,91 @@ from ..schemas.sistema import LogSistemaResponse, EstadisticasResponse, Monitore
 from ..schemas.dispositivo import EstadoDispositivo
 import json
 import logging
+import os
+from functools import lru_cache
+from pathlib import Path
+import time
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Cache para resultados de conteo de fichadas (cache de 30 segundos)
+_fichadas_cache = {"data": None, "timestamp": 0, "ttl": 30}
+
+
+def contar_fichadas_rapido(fecha: datetime.date = None) -> Dict:
+    """
+    Cuenta fichadas con cache para evitar leer archivos constantemente.
+    Usa grep para contar líneas de forma más eficiente.
+    """
+    if fecha is None:
+        fecha = datetime.now().date()
+    
+    # Verificar cache
+    current_time = time.time()
+    if (_fichadas_cache["data"] is not None and 
+        current_time - _fichadas_cache["timestamp"] < _fichadas_cache["ttl"]):
+        cached_fecha = _fichadas_cache["data"].get("fecha")
+        if cached_fecha == fecha:
+            return _fichadas_cache["data"]
+    
+    # Cache expirado o fecha diferente, recalcular
+    fichadas_dir = "/data/fichadas"
+    resumen = []
+    total_fichadas = 0
+    fecha_str = fecha.strftime('%d/%m/%Y')
+    
+    if os.path.exists(fichadas_dir):
+        try:
+            archivos = [f for f in os.listdir(fichadas_dir) if f.endswith('.txt')]
+            
+            # Procesar archivos en paralelo con límite de tiempo
+            import concurrent.futures
+            
+            def contar_fichadas_archivo(archivo):
+                archivo_path = os.path.join(fichadas_dir, archivo)
+                numero_dispositivo = archivo.replace('.txt', '')
+                
+                try:
+                    # Usar wc y grep en pipeline (más rápido)
+                    import subprocess
+                    result = subprocess.run(
+                        f"grep -c '{fecha_str}' {archivo_path} || echo 0",
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=1
+                    )
+                    fichadas_count = int(result.stdout.strip())
+                except:
+                    fichadas_count = 0
+                
+                return {
+                    "numero_dispositivo": numero_dispositivo,
+                    "fichadas_hoy": fichadas_count
+                }
+            
+            # Procesar hasta 10 archivos en paralelo
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                results = list(executor.map(contar_fichadas_archivo, archivos, timeout=15))
+            
+            for result in results:
+                total_fichadas += result["fichadas_hoy"]
+                resumen.append(result)
+                
+        except Exception as e:
+            logger.error(f"Error contando fichadas: {e}")
+    
+    # Actualizar cache
+    result = {
+        "resumen": resumen,
+        "total_fichadas": total_fichadas,
+        "fecha": fecha
+    }
+    _fichadas_cache["data"] = result
+    _fichadas_cache["timestamp"] = current_time
+    
+    return result
 
 
 class ConnectionManager:
@@ -155,14 +237,9 @@ async def obtener_estadisticas(db: Session = Depends(get_db)):
         LogSistema.created_at >= hace_24h
     ).count()
     
-    # Contar fichadas de hoy (aproximado basado en logs)
-    hoy = datetime.now().date()
-    fichadas_hoy = db.query(LogSistema).filter(
-        LogSistema.componente == "recolector",
-        LogSistema.nivel == "INFO",
-        func.date(LogSistema.created_at) == hoy,
-        LogSistema.mensaje.contains("fichadas")
-    ).count()
+    # Usar cache para contar fichadas
+    fichadas_data = contar_fichadas_rapido()
+    fichadas_hoy = fichadas_data["total_fichadas"]
     
     return EstadisticasResponse(
         total_dispositivos=total_dispositivos,
@@ -252,3 +329,37 @@ async def descargar_logs(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=logs_sistema.csv"}
     )
+
+
+@router.get("/fichadas/resumen-diario")
+async def obtener_resumen_fichadas_diario(db: Session = Depends(get_db)):
+    """Obtener resumen de fichadas por dispositivo del día actual"""
+    hoy = datetime.now().date()
+    dispositivos = db.query(Dispositivo).filter(Dispositivo.activo == True).all()
+    
+    # Obtener conteo de fichadas desde cache
+    fichadas_data = contar_fichadas_rapido(hoy)
+    fichadas_por_numero = {
+        item["numero_dispositivo"]: item["fichadas_hoy"] 
+        for item in fichadas_data["resumen"]
+    }
+    
+    resumen = []
+    for dispositivo in dispositivos:
+        fichadas_count = fichadas_por_numero.get(dispositivo.numero_dispositivo, 0)
+        
+        resumen.append({
+            "dispositivo_id": dispositivo.id,
+            "nombre": dispositivo.nombre,
+            "numero_dispositivo": dispositivo.numero_dispositivo,
+            "ip": dispositivo.ip,
+            "fichadas_hoy": fichadas_count,
+            "ultima_actualizacion": dispositivo.fecha_ultima_consulta,
+            "estado_conexion": dispositivo.estado_conexion
+        })
+    
+    return {
+        "resumen": resumen,
+        "total_fichadas": fichadas_data["total_fichadas"],
+        "fecha": hoy.strftime('%Y-%m-%d')
+    }

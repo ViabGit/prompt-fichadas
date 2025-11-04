@@ -3,6 +3,9 @@ FROM python:3.11-slim
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
+    iputils-ping \
+    net-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

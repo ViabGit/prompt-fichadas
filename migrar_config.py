@@ -17,11 +17,25 @@ def migrar_configuracion():
     """Migra la configuración desde TACollector.config.json"""
     
     # Ruta al archivo de configuración original
-    config_path = "d:/Downloads/tacollector/Output/TACollector.config.json"
+    # Primero buscar en el directorio actual, luego en la ruta original
+    config_paths = [
+        "TACollector.config.json",  # Directorio actual
+        "/app/TACollector.config.json",  # Docker container
+        "d:/Downloads/tacollector/Output/TACollector.config.json"  # Windows original
+    ]
     
-    if not os.path.exists(config_path):
-        print(f"ERROR: No se encontró el archivo {config_path}")
+    config_path = None
+    for path in config_paths:
+        if os.path.exists(path):
+            config_path = path
+            break
+    
+    if not config_path:
+        print(f"ERROR: No se encontró el archivo TACollector.config.json en ninguna ubicación")
+        print(f"Ubicaciones buscadas: {', '.join(config_paths)}")
         return False
+    
+    print(f"Usando archivo de configuración: {config_path}")
     
     try:
         # Leer configuración original

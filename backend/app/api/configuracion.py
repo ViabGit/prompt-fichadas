@@ -18,6 +18,7 @@ notificacion_service = NotificacionService()
 
 
 @router.get("/", response_model=ConfiguracionGlobalResponse)
+@router.get("", response_model=ConfiguracionGlobalResponse)
 async def obtener_configuracion(db: Session = Depends(get_db)):
     """Obtener configuración global actual"""
     config = db.query(ConfiguracionGlobal).first()
@@ -75,6 +76,7 @@ async def obtener_configuracion(db: Session = Depends(get_db)):
 
 
 @router.put("/", response_model=ConfiguracionGlobalResponse)
+@router.put("", response_model=ConfiguracionGlobalResponse)
 async def actualizar_configuracion(
     config_update: ConfiguracionGlobalUpdate, 
     db: Session = Depends(get_db)
